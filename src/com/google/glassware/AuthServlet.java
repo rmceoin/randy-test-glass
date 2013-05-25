@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletResponse;
  * 
  * @author Jenny Murphy - http://google.com/+JennyMurphy
  */
+@SuppressWarnings("serial")
 public class AuthServlet extends HttpServlet {
   private static final Logger LOG = Logger.getLogger(AuthServlet.class.getSimpleName());
 

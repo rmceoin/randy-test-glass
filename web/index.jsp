@@ -76,6 +76,9 @@ limitations under the License.
     .btn {
       width: 100%;
     }
+ 	#firstrow {
+ 		margin-top: 41px;
+ 	}
   </style>
 </head>
 <body>
@@ -96,52 +99,8 @@ limitations under the License.
 
 <div class="container">
 
-  <!-- Main hero unit for a primary marketing message or call to action -->
-  <div class="hero-unit">
-    <h1>Your Recent Timeline</h1>
-    <% String flash = WebUtil.getClearFlash(request);
-      if (flash != null) { %>
-    <span class="label label-warning">Message: <%= flash %> </span>
-    <% } %>
-
-    <div style="margin-top: 5px;">
-
-      <% if (timelineItems != null) {
-        for (TimelineItem timelineItem : timelineItems) { %>
-      <ul class="span3 tile">
-        <li><strong>ID: </strong> <%= timelineItem.getId() %>
-        </li>
-        <li>
-          <strong>Text: </strong> <%= timelineItem.getText() %>
-        </li>
-        <li>
-          <strong>HTML: </strong> <%= timelineItem.getHtml() %>
-        </li>
-        <li>
-          <strong>Attachments: </strong>
-          <%
-          if (timelineItem.getAttachments() != null) {
-            for (Attachment attachment : timelineItem.getAttachments()) {
-              if (MirrorClient.getAttachmentContentType(credential, timelineItem.getId(), attachment.getId()).startsWith("image")) { %>
-          <img src="<%= appBaseUrl + "attachmentproxy?attachment=" +
-            attachment.getId() + "&timelineItem=" + timelineItem.getId() %>">
-          <% } else { %>
-          <a href="<%= appBaseUrl + "attachmentproxy?attachment=" +
-            attachment.getId() + "&timelineItem=" + timelineItem.getId() %>">Download</a>
-          <% }
-            }
-          } %>
-        </li>
-
-      </ul>
-      <% }
-      } %>
-    </div>
-    <div style="clear:both;"></div>
-  </div>
-
   <!-- Example row of columns -->
-  <div class="row">
+  <div class="row" id="firstrow">
     <div class="span4">
       <h2>Timeline</h2>
 
@@ -312,6 +271,51 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
       <% }%>
     </div>
   </div>
+  
+    <!-- Main hero unit for a primary marketing message or call to action -->
+  <div id="timeline" class="hero-unit">
+    <h1>Your Recent Timeline</h1>
+    <% String flash = WebUtil.getClearFlash(request);
+      if (flash != null) { %>
+    <span class="label label-warning">Message: <%= flash %> </span>
+    <% } %>
+
+    <div style="margin-top: 5px;">
+
+      <% if (timelineItems != null) {
+        for (TimelineItem timelineItem : timelineItems) { %>
+      <ul class="span3 tile">
+        <li><strong>ID: </strong> <%= timelineItem.getId() %>
+        </li>
+        <li>
+          <strong>Text: </strong> <%= timelineItem.getText() %>
+        </li>
+        <li>
+          <strong>HTML: </strong> <%= timelineItem.getHtml() %>
+        </li>
+        <li>
+          <strong>Attachments: </strong>
+          <%
+          if (timelineItem.getAttachments() != null) {
+            for (Attachment attachment : timelineItem.getAttachments()) {
+              if (MirrorClient.getAttachmentContentType(credential, timelineItem.getId(), attachment.getId()).startsWith("image")) { %>
+          <img src="<%= appBaseUrl + "attachmentproxy?attachment=" +
+            attachment.getId() + "&timelineItem=" + timelineItem.getId() %>">
+          <% } else { %>
+          <a href="<%= appBaseUrl + "attachmentproxy?attachment=" +
+            attachment.getId() + "&timelineItem=" + timelineItem.getId() %>">Download</a>
+          <% }
+            }
+          } %>
+        </li>
+
+      </ul>
+      <% }
+      } %>
+    </div>
+    <div style="clear:both;"></div>
+  </div>
+  
 </div>
 
 <script
