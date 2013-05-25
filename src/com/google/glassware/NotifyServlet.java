@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -44,6 +46,7 @@ import javax.servlet.http.HttpServletResponse;
  * 
  * @author Jenny Murphy - http://google.com/+JennyMurphy
  */
+@SuppressWarnings("serial")
 public class NotifyServlet extends HttpServlet {
   private static final Logger LOG = Logger.getLogger(MainServlet.class.getSimpleName());
 
@@ -131,10 +134,23 @@ public class NotifyServlet extends HttpServlet {
 
         MirrorClient.insertTimelineItem(credential, echoPhotoItem, "image/jpeg", stream);
 
-      } if (notification.getUserActions().contains(new UserAction().setType("UPDATE"))) {
-    	  LOG.info("update");
+      } if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("drill"))) {
+    	  LOG.info("custom drill");
+          TimelineItem drillItem = new TimelineItem();
+          drillItem.setText("Drill, baby drill!");
+          drillItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
+          
+          try {
+			URL url = new URL("http://nazret.com/blog/media/blogs/new/oil_drill2042909.jpg");
+			URLConnection connection1 = url.openConnection();
+			  
+			MirrorClient.insertTimelineItem(credential, drillItem, "image/jpeg", connection1.getInputStream());
+          } catch (Exception e) {
+        	  LOG.info("Couldn't get URL");
+        	  MirrorClient.insertTimelineItem(credential, drillItem);
+          }
       } else {
-        LOG.warning("I don't know what to do with this notification, so I'm ignoring it.");
+        LOG.warning("I don't know what to do with this notification, so I'm ignoring it." + notification.getUserActions());
       }
     }
   }
