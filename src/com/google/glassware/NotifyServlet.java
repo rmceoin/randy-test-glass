@@ -25,6 +25,11 @@ import com.google.api.services.mirror.model.Notification;
 import com.google.api.services.mirror.model.NotificationConfig;
 import com.google.api.services.mirror.model.TimelineItem;
 import com.google.api.services.mirror.model.UserAction;
+import com.google.appengine.api.datastore.DatastoreService;
+import com.google.appengine.api.datastore.DatastoreServiceFactory;
+import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.common.collect.Lists;
 
 import java.io.BufferedReader;
@@ -34,6 +39,7 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Date;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -149,6 +155,17 @@ public class NotifyServlet extends HttpServlet {
         	  LOG.info("Couldn't get URL");
         	  MirrorClient.insertTimelineItem(credential, drillItem);
           }
+          
+          Key drilledKey = KeyFactory.createKey("Drilling", "dont know");
+          Date date = new Date();
+          Entity drilled = new Entity("drilled", drilledKey);
+          drilled.setProperty("userId", userId);
+          drilled.setProperty("date", date);
+          drilled.setProperty("timelineId", timelineItem.getId());
+
+          DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+          datastore.put(drilled);
+          
       } else {
         LOG.warning("I don't know what to do with this notification, so I'm ignoring it." + notification.getUserActions());
       }

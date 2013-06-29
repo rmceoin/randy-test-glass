@@ -22,6 +22,8 @@ limitations under the License.
 <%@ page import="com.google.api.services.mirror.model.TimelineItem" %>
 <%@ page import="com.google.api.services.mirror.model.Subscription" %>
 <%@ page import="com.google.api.services.mirror.model.Attachment" %>
+<%@ page import="com.google.api.services.oauth2.model.Userinfo" %>
+
 <%@ page import="com.google.glassware.MainServlet" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
@@ -32,6 +34,7 @@ limitations under the License.
   String appBaseUrl = WebUtil.buildUrl(request, "/");
 
   Credential credential = com.google.glassware.AuthUtil.getCredential(userId);
+  Userinfo userInfo = MirrorClient.getUserinfo(userId);
 
   Contact contact = MirrorClient.getContact(credential, MainServlet.CONTACT_NAME);
 
@@ -58,7 +61,7 @@ limitations under the License.
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Randy Test Glass</title>
+  <title>Randy Glass Test</title>
   <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"
         media="screen">
 
@@ -85,10 +88,11 @@ limitations under the License.
 <div class="navbar navbar-inverse navbar-fixed-top">
   <div class="navbar-inner">
     <div class="container">
-      <a class="brand" href="#">Randy Test Glass</a>
+      <a class="brand" href="#">Randy Test Glass - Version 2</a>
 
       <div class="nav-collapse collapse">
         <form class="navbar-form pull-right" action="/signout" method="post">
+          <%= userInfo.getName() %>
           <button type="submit" class="btn">Sign out</button>
         </form>
       </div>
@@ -119,6 +123,7 @@ limitations under the License.
       <form action="<%= WebUtil.buildUrl(request, "/main") %>" method="post">
         <input type="hidden" name="operation" value="insertItem">
         <input type="hidden" name="publication" value="The Dallas Morning News">
+        <input type="hidden" name="canonicalUrl" value="http://www.dallasnews.com/news/jfk50/reflect/20130522-dealey-plaza-memorial-planned-for-50th-anniversary-of-jfk-assassination.ece">
         <input type="hidden" name="message" value="Dealey Plaza memorial planned for 50th anniversary of JFK assassination">
         <input type="hidden" name="imageUrl" value="<%= appBaseUrl +
                "static/images/N1A_25DealeyPlaza14-640x360.jpg" %>">
@@ -149,6 +154,7 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
       <form action="<%= WebUtil.buildUrl(request, "/main") %>" method="post">
         <input type="hidden" name="operation" value="insertItem">
         <input type="hidden" name="publication" value="The Press-Enterprise">
+        <input type="hidden" name="canonicalUrl" value="http://www.pe.com/local-news/transportation-headlines/20130523-lane-splitting-no-good-data-on-whether-it-s-dangerous.ece">
         <input type="hidden" name="message" value="LANE-SPLITTING: 'No good data' on whether it's dangerous">
         <input type="hidden" name="imageUrl" value="<%= appBaseUrl +
                "static/images/R_SPLIT_0524slb-640x360.jpg" %>">
@@ -161,6 +167,7 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
       <form action="<%= WebUtil.buildUrl(request, "/main") %>" method="post">
         <input type="hidden" name="operation" value="insertItem">
         <input type="hidden" name="publication" value="The Providence-Journal">
+        <input type="hidden" name="canonicalUrl" value="http://news.providencejournal.com/breaking-news/2013/05/ri-beaches-coming-back-from-sandy-better-than-ever-dem-says.html">
         <input type="hidden" name="message" value="RI beaches come back from Sandy better than ever, DEM says">
         <input type="hidden" name="imageUrl" value="<%= appBaseUrl +
                "static/images/wheelerbeach-640x360.jpg" %>">
@@ -192,6 +199,7 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
       <hr>
       <form action="<%= WebUtil.buildUrl(request, "/main") %>" method="post">
         <input type="hidden" name="operation" value="insertItemAllUsers">
+        <input type="hidden" name="canonicalUrl" value="http://www.dallasnews.com/news/jfk50/reflect/20130522-dealey-plaza-memorial-planned-for-50th-anniversary-of-jfk-assassination.ece">
         <button class="btn" type="submit">A card to all users</button>
       </form>
 
@@ -274,7 +282,7 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
   
     <!-- Main hero unit for a primary marketing message or call to action -->
   <div id="timeline" class="hero-unit">
-    <h1>Your Recent Timeline</h1>
+    <h1><%= userInfo.getGivenName() %>'s Recent Timeline</h1>
     <% String flash = WebUtil.getClearFlash(request);
       if (flash != null) { %>
     <span class="label label-warning">Message: <%= flash %> </span>

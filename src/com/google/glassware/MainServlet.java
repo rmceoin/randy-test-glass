@@ -26,10 +26,16 @@ import com.google.api.services.mirror.model.MenuItem;
 import com.google.api.services.mirror.model.MenuValue;
 import com.google.api.services.mirror.model.NotificationConfig;
 import com.google.api.services.mirror.model.TimelineItem;
+import com.google.appengine.api.datastore.DatastoreService;
+import com.google.appengine.api.datastore.DatastoreServiceFactory;
+import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -44,6 +50,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 @SuppressWarnings("serial")
 public class MainServlet extends HttpServlet {
+	  @SuppressWarnings("unused")
+	private static final String KIND = MainServlet.class.getName();
 
   /**
    * Private class to process batch request results.
@@ -110,6 +118,9 @@ public class MainServlet extends HttpServlet {
           } else {
         	  timelineItem.setText(req.getParameter("message"));
           }
+          if (req.getParameter("canonicalUrl") != null) {
+        	  timelineItem.setCanonicalUrl(req.getParameter("canonicalUrl"));
+          }
     	  StringBuilder builder = new StringBuilder();
     	  builder.append("<article class=\"photo\">\n");
           if (req.getParameter("imageUrl") != null) {
@@ -153,6 +164,7 @@ public class MainServlet extends HttpServlet {
       timelineItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
 
         MirrorClient.insertTimelineItem(credential, timelineItem);
+        SaveNewsPost(timelineItem);
 
       message = "A timeline item has been inserted.";
 
@@ -217,6 +229,7 @@ public class MainServlet extends HttpServlet {
       } else {
         TimelineItem allUsersItem = new TimelineItem();
         allUsersItem.setText("Hello Everyone!");
+        allUsersItem.setCanonicalUrl("http://hello.com/");
 
         BatchRequest batch = MirrorClient.getMirror(null).batch();
         BatchCallback callback = new BatchCallback();
@@ -229,6 +242,7 @@ public class MainServlet extends HttpServlet {
         }
 
         batch.execute();
+        SaveNewsPost(allUsersItem);
         message =
             "Successfully sent cards to " + callback.success + " users (" + callback.failure
                 + " failed).";
@@ -243,4 +257,21 @@ public class MainServlet extends HttpServlet {
     WebUtil.setFlash(req, message);
     res.sendRedirect(WebUtil.buildUrl(req, "/"));
   }
+  void SaveNewsPost(TimelineItem timelineItem) {
+	  Key newsPostKey = KeyFactory.createKey("NewsPost", "dont know");
+	  Date date = new Date();
+	  Entity drilled = new Entity("newspost", newsPostKey);
+	  drilled.setProperty("date", date);
+	  String Text=timelineItem.getText();
+	  if (Text.length()>500) {
+		  Text=Text.substring(0,500);
+	  }
+	  drilled.setProperty("timelineText", Text);
+	  drilled.setProperty("timelineHtml", timelineItem.getHtml());
+	  drilled.setProperty("timelineCanonicalUrl", timelineItem.getCanonicalUrl());
+
+	  DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+	  datastore.put(drilled);
+  }
 }
+

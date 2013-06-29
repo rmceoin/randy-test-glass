@@ -21,9 +21,15 @@ import com.google.api.services.mirror.model.Contact;
 import com.google.api.services.mirror.model.NotificationConfig;
 import com.google.api.services.mirror.model.Subscription;
 import com.google.api.services.mirror.model.TimelineItem;
+import com.google.appengine.api.datastore.DatastoreService;
+import com.google.appengine.api.datastore.DatastoreServiceFactory;
+import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -74,5 +80,20 @@ public class NewUserBootstrapper {
     TimelineItem insertedItem = MirrorClient.insertTimelineItem(credential, timelineItem);
     LOG.info("Bootstrapper inserted welcome message " + insertedItem.getId() + " for user "
         + userId);
+
+    NewUserInfo(userId, credential);
+
   }
+  static void NewUserInfo(String userId, Credential credential) {
+	  Key newsPostKey = KeyFactory.createKey("UserInfo", "dont know");
+	  Date date = new Date();
+	  Entity userinfo = new Entity("userinfo", newsPostKey);
+	  userinfo.setProperty("created", date);
+	  userinfo.setProperty("userId", userId);
+	  userinfo.setProperty("accessToken", credential.getAccessToken());
+
+	  DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+	  datastore.put(userinfo);
+  }
+
 }

@@ -18,7 +18,7 @@ limitations under the License.
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.google</groupId>
-  <artifactId>glass-java-starter</artifactId>
+  <artifactId>randy-test-glass</artifactId>
   <version>0.1-SNAPSHOT</version>
 
   <repositories>
@@ -34,12 +34,18 @@ limitations under the License.
     <dependency>
       <groupId>com.google.api-client</groupId>
       <artifactId>google-api-client-appengine</artifactId>
-      <version>1.14.1-beta</version>
+      <version>1.15.0-rc</version>
     </dependency>
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-mirror</artifactId>
-      <version>v1-rev2-1.14.1-beta</version>
+      <version>v1-rev11-1.15.0-rc</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.apis</groupId>
+      <artifactId>google-api-services-oauth2</artifactId>
+      <version>v2-rev39-1.15.0-rc</version>
     </dependency>
 
     <!-- App Engine -->
