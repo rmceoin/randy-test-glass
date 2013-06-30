@@ -50,228 +50,257 @@ import javax.servlet.http.HttpServletResponse;
  */
 @SuppressWarnings("serial")
 public class MainServlet extends HttpServlet {
-	  @SuppressWarnings("unused")
+	@SuppressWarnings("unused")
 	private static final String KIND = MainServlet.class.getName();
 
-  /**
-   * Private class to process batch request results.
-   * 
-   * For more information, see
-   * https://code.google.com/p/google-api-java-client/wiki/Batch.
-   */
-  private final class BatchCallback extends JsonBatchCallback<TimelineItem> {
-    private int success = 0;
-    private int failure = 0;
+	/**
+	 * Private class to process batch request results.
+	 * 
+	 * For more information, see
+	 * https://code.google.com/p/google-api-java-client/wiki/Batch.
+	 */
+	private final class BatchCallback extends JsonBatchCallback<TimelineItem> {
+		private int success = 0;
+		private int failure = 0;
 
-    @Override
-    public void onSuccess(TimelineItem item, HttpHeaders headers) throws IOException {
-      ++success;
-    }
+		@Override
+		public void onSuccess(TimelineItem item, HttpHeaders headers)
+				throws IOException {
+			++success;
+		}
 
-    @Override
-    public void onFailure(GoogleJsonError error, HttpHeaders headers) throws IOException {
-      ++failure;
-      LOG.info("Failed to insert item: " + error.getMessage());
-    }
-  }
+		@Override
+		public void onFailure(GoogleJsonError error, HttpHeaders headers)
+				throws IOException {
+			++failure;
+			LOG.info("Failed to insert item: " + error.getMessage());
+		}
+	}
 
-  private static final Logger LOG = Logger.getLogger(MainServlet.class.getSimpleName());
-  public static final String CONTACT_NAME = "Randy Glass Test";
+	private static final Logger LOG = Logger.getLogger(MainServlet.class
+			.getSimpleName());
+	public static final String CONTACT_NAME = "Randy Glass Test";
 
-  /**
-   * Do stuff when buttons on index.jsp are clicked
-   */
-  @Override
-  protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	/**
+	 * Do stuff when buttons on index.jsp are clicked
+	 */
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse res)
+			throws IOException {
 
-    String userId = AuthUtil.getUserId(req);
-    Credential credential = AuthUtil.newAuthorizationCodeFlow().loadCredential(userId);
-    String message = "";
+		String userId = AuthUtil.getUserId(req);
+		Credential credential = AuthUtil.newAuthorizationCodeFlow()
+				.loadCredential(userId);
+		String message = "";
 
-    if (req.getParameter("operation").equals("insertSubscription")) {
+		if (req.getParameter("operation").equals("insertSubscription")) {
 
-      // subscribe (only works deployed to production)
-      try {
-        MirrorClient.insertSubscription(credential, WebUtil.buildUrl(req, "/notify"), userId,
-            req.getParameter("collection"));
-        message = "Application is now subscribed to updates.";
-      } catch (GoogleJsonResponseException e) {
-        LOG.warning("Could not subscribe " + WebUtil.buildUrl(req, "/notify") + " because "
-            + e.getDetails().toPrettyString());
-        message = "Failed to subscribe. Check your log for details";
-      }
+			// subscribe (only works deployed to production)
+			try {
+				MirrorClient.insertSubscription(credential,
+						WebUtil.buildUrl(req, "/notify"), userId,
+						req.getParameter("collection"));
+				message = "Application is now subscribed to updates.";
+			} catch (GoogleJsonResponseException e) {
+				LOG.warning("Could not subscribe "
+						+ WebUtil.buildUrl(req, "/notify") + " because "
+						+ e.getDetails().toPrettyString());
+				message = "Failed to subscribe. Check your log for details";
+			}
 
-    } else if (req.getParameter("operation").equals("deleteSubscription")) {
+		} else if (req.getParameter("operation").equals("deleteSubscription")) {
 
-      // subscribe (only works deployed to production)
-      MirrorClient.deleteSubscription(credential, req.getParameter("subscriptionId"));
+			// subscribe (only works deployed to production)
+			MirrorClient.deleteSubscription(credential,
+					req.getParameter("subscriptionId"));
 
-      message = "Application has been unsubscribed.";
+			message = "Application has been unsubscribed.";
 
-    } else if (req.getParameter("operation").equals("insertItem")) {
-      LOG.fine("Inserting Timeline Item");
-      TimelineItem timelineItem = new TimelineItem();
+		} else if (req.getParameter("operation").equals("insertItem")) {
+			LOG.fine("Inserting Timeline Item");
+			TimelineItem timelineItem = new TimelineItem();
 
-      if (req.getParameter("message") != null) {
-          if (req.getParameter("fullmessage") != null) {
-        	  timelineItem.setText(req.getParameter("fullmessage"));
-          } else {
-        	  timelineItem.setText(req.getParameter("message"));
-          }
-          if (req.getParameter("canonicalUrl") != null) {
-        	  timelineItem.setCanonicalUrl(req.getParameter("canonicalUrl"));
-          }
-    	  StringBuilder builder = new StringBuilder();
-    	  builder.append("<article class=\"photo\">\n");
-          if (req.getParameter("imageUrl") != null) {
-        	  builder.append("<div class=\"photo-overlay\"/>\n");
-        	  builder.append("</div>\n");
-        	  builder.append("<img src=\"" + req.getParameter("imageUrl") + "\" width=\"100%\" height=\"100%\">\n");
-          }
-    	  builder.append("<section>\n");
-    	  builder.append("<p class=\"text-auto-size\"><b>");
-    	  builder.append(req.getParameter("message"));
-    	  builder.append("</b></p>\n");
-    	  builder.append("</section>\n");
-    	  if (req.getParameter("publication") != null) {
-	    	  builder.append("<footer>");
-	    	  builder.append("<div>");
-	    	  builder.append(req.getParameter("publication"));
-	    	  builder.append("</div>");
-	    	  builder.append("</footer>\n");
-    	  }
-    	  builder.append("</article>");
-    	  
-    	  // <article>\n<div class=\"photo-overlay\"></div>\n<img src=\"https://randy-glass-test.appspot.com/static/images/N1A_25DealeyPlaza14-640x360.jpg\" width=\"100%\" height=\"100%\">\n\n
-    	  // <section>\n
-    	  // <p class=\"text-auto-size\">Dealey Plaza memorial planned for 50th anniversary of JFK assassination</p>\n</section>\n<footer><div>The Dallas Morning News</div></footer>\n</article>
-    	  
-    	  // <img src=\"https://mirror-api-playground.appspot.com/links/filoli-spring-fling.jpg\" width=\"100%\" height=\"100%\">
-    	  
-//        String article="<article>\n  <section>\n    <div class=\"text-large\" style=\"\">\n      <p class=\"yellow\">8:00<sub>PM</sub></p>\n      <p>Dinner with folks tonight</p>\n\" +
-//        		"    </div>\n  </section>\n  <footer>\n    <div>The Dallas Morning News</div>\n  </footer>\n</article>\n";
-        timelineItem.setHtml(builder.toString());
-        timelineItem.setTitle(CONTACT_NAME);
-      }
+			if (req.getParameter("message") != null) {
+				if (req.getParameter("fullmessage") != null) {
+					timelineItem.setText(req.getParameter("fullmessage"));
+				} else {
+					timelineItem.setText(req.getParameter("message"));
+				}
+				if (req.getParameter("canonicalUrl") != null) {
+					timelineItem.setCanonicalUrl(req
+							.getParameter("canonicalUrl"));
+				}
+				StringBuilder builder = new StringBuilder();
+				builder.append("<article class=\"photo\">\n");
+				if (req.getParameter("imageUrl") != null) {
+					builder.append("<div class=\"photo-overlay\"/>\n");
+					builder.append("</div>\n");
+					builder.append("<img src=\"" + req.getParameter("imageUrl")
+							+ "\" width=\"100%\" height=\"100%\">\n");
+				}
+				builder.append("<section>\n");
+				builder.append("<p class=\"text-auto-size\"><b>");
+				builder.append(req.getParameter("message"));
+				builder.append("</b></p>\n");
+				builder.append("</section>\n");
+				if (req.getParameter("publication") != null) {
+					builder.append("<footer>");
+					builder.append("<div>");
+					builder.append(req.getParameter("publication"));
+					builder.append("</div>");
+					builder.append("</footer>\n");
+				}
+				builder.append("</article>");
 
-      List<MenuItem> menuItemList = new ArrayList<MenuItem>();
-      // Built in actions
-      menuItemList.add(new MenuItem().setAction("READ_ALOUD"));
-//      menuItemList.add(new MenuItem().setAction("DELETE"));
-      timelineItem.setMenuItems(menuItemList);
-      
-      // Triggers an audible tone when the timeline item is received
-      timelineItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
+				// <article>\n<div class=\"photo-overlay\"></div>\n<img
+				// src=\"https://randy-glass-test.appspot.com/static/images/N1A_25DealeyPlaza14-640x360.jpg\"
+				// width=\"100%\" height=\"100%\">\n\n
+				// <section>\n
+				// <p class=\"text-auto-size\">Dealey Plaza memorial planned for
+				// 50th anniversary of JFK
+				// assassination</p>\n</section>\n<footer><div>The Dallas
+				// Morning News</div></footer>\n</article>
 
-        MirrorClient.insertTimelineItem(credential, timelineItem);
-        SaveNewsPost(timelineItem);
+				// <img
+				// src=\"https://mirror-api-playground.appspot.com/links/filoli-spring-fling.jpg\"
+				// width=\"100%\" height=\"100%\">
 
-      message = "A timeline item has been inserted.";
+				// String article="<article>\n <section>\n <div
+				// class=\"text-large\" style=\"\">\n <p
+				// class=\"yellow\">8:00<sub>PM</sub></p>\n <p>Dinner with folks
+				// tonight</p>\n\" +
+				// "    </div>\n  </section>\n  <footer>\n    <div>The Dallas Morning News</div>\n  </footer>\n</article>\n";
+				timelineItem.setHtml(builder.toString());
+				timelineItem.setTitle(CONTACT_NAME);
+			}
 
-    } else if (req.getParameter("operation").equals("insertItemWithAction")) {
-      LOG.fine("Inserting Timeline Item");
-      TimelineItem timelineItem = new TimelineItem();
-      timelineItem.setText("Tell me what you had for lunch :)");
+			List<MenuItem> menuItemList = new ArrayList<MenuItem>();
+			// Built in actions
+			menuItemList.add(new MenuItem().setAction("READ_ALOUD"));
+			// menuItemList.add(new MenuItem().setAction("DELETE"));
+			timelineItem.setMenuItems(menuItemList);
 
-      List<MenuItem> menuItemList = new ArrayList<MenuItem>();
-      // Built in actions
-      menuItemList.add(new MenuItem().setAction("REPLY"));
-      menuItemList.add(new MenuItem().setAction("READ_ALOUD"));
+			// Triggers an audible tone when the timeline item is received
+			timelineItem.setNotification(new NotificationConfig()
+					.setLevel("DEFAULT"));
 
-      // And custom actions
-      List<MenuValue> menuValues = new ArrayList<MenuValue>();
-      menuValues.add(new MenuValue().setIconUrl(WebUtil.buildUrl(req, "/static/images/drill.png"))
-          .setDisplayName("Drill In"));
-      menuItemList.add(new MenuItem().setValues(menuValues).setId("drill").setAction("CUSTOM"));
+			TimelineItem inserted=MirrorClient.insertTimelineItem(credential, timelineItem);
+			SaveNewsPost(inserted);
 
-      timelineItem.setMenuItems(menuItemList);
-      timelineItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
+			message = "A timeline item has been inserted.";
 
-      MirrorClient.insertTimelineItem(credential, timelineItem);
+		} else if (req.getParameter("operation").equals("insertItemWithAction")) {
+			LOG.fine("Inserting Timeline Item");
+			TimelineItem timelineItem = new TimelineItem();
+			timelineItem.setText("Tell me what you had for lunch :)");
 
-      message = "A timeline item with actions has been inserted.";
+			List<MenuItem> menuItemList = new ArrayList<MenuItem>();
+			// Built in actions
+			menuItemList.add(new MenuItem().setAction("REPLY"));
+			menuItemList.add(new MenuItem().setAction("READ_ALOUD"));
 
-    } else if (req.getParameter("operation").equals("insertContact")) {
-      if (req.getParameter("iconUrl") == null || req.getParameter("name") == null) {
-        message = "Must specify iconUrl and name to insert contact";
-      } else {
-        // Insert a contact
-        LOG.fine("Inserting contact Item");
-        Contact contact = new Contact();
-        contact.setId(req.getParameter("name"));
-        contact.setDisplayName(req.getParameter("name"));
-        contact.setImageUrls(Lists.newArrayList(req.getParameter("iconUrl")));
-        MirrorClient.insertContact(credential, contact);
+			// And custom actions
+			List<MenuValue> menuValues = new ArrayList<MenuValue>();
+			menuValues.add(new MenuValue().setIconUrl(
+					WebUtil.buildUrl(req, "/static/images/drill.png"))
+					.setDisplayName("Drill In"));
+			menuItemList.add(new MenuItem().setValues(menuValues)
+					.setId("drill").setAction("CUSTOM"));
 
-        message = "Inserted contact: " + req.getParameter("name");
-      }
+			timelineItem.setMenuItems(menuItemList);
+			timelineItem.setNotification(new NotificationConfig()
+					.setLevel("DEFAULT"));
 
-    } else if (req.getParameter("operation").equals("deleteContact")) {
+			MirrorClient.insertTimelineItem(credential, timelineItem);
 
-      // Insert a contact
-      LOG.fine("Deleting contact Item");
-      MirrorClient.deleteContact(credential, req.getParameter("id"));
+			message = "A timeline item with actions has been inserted.";
 
-      message = "Contact has been deleted.";
+		} else if (req.getParameter("operation").equals("insertContact")) {
+			if (req.getParameter("iconUrl") == null
+					|| req.getParameter("name") == null) {
+				message = "Must specify iconUrl and name to insert contact";
+			} else {
+				// Insert a contact
+				LOG.fine("Inserting contact Item");
+				Contact contact = new Contact();
+				contact.setId(req.getParameter("name"));
+				contact.setDisplayName(req.getParameter("name"));
+				contact.setImageUrls(Lists.newArrayList(req
+						.getParameter("iconUrl")));
+				MirrorClient.insertContact(credential, contact);
 
-    } else if (req.getParameter("operation").equals("insertItemAllUsers")) {
-      if (req.getServerName().contains("glass-java-starter-demo.appspot.com")) {
-        message = "This function is disabled on the demo instance.";
-      }
+				message = "Inserted contact: " + req.getParameter("name");
+			}
 
-      // Insert a contact
-      List<String> users = AuthUtil.getAllUserIds();
-      LOG.info("found " + users.size() + " users");
-      if (users.size() > 10) {
-        // We wouldn't want you to run out of quota on your first day!
-        message =
-            "Total user count is " + users.size() + ". Aborting broadcast " + "to save your quota.";
-      } else {
-        TimelineItem allUsersItem = new TimelineItem();
-        allUsersItem.setText("Hello Everyone!");
-        allUsersItem.setCanonicalUrl("http://hello.com/");
+		} else if (req.getParameter("operation").equals("deleteContact")) {
 
-        BatchRequest batch = MirrorClient.getMirror(null).batch();
-        BatchCallback callback = new BatchCallback();
+			// Insert a contact
+			LOG.fine("Deleting contact Item");
+			MirrorClient.deleteContact(credential, req.getParameter("id"));
 
-        // TODO: add a picture of a cat
-        for (String user : users) {
-          Credential userCredential = AuthUtil.getCredential(user);
-          MirrorClient.getMirror(userCredential).timeline().insert(allUsersItem)
-              .queue(batch, callback);
-        }
+			message = "Contact has been deleted.";
 
-        batch.execute();
-        SaveNewsPost(allUsersItem);
-        message =
-            "Successfully sent cards to " + callback.success + " users (" + callback.failure
-                + " failed).";
-      }
+		} else if (req.getParameter("operation").equals("insertItemAllUsers")) {
+			if (req.getServerName().contains(
+					"glass-java-starter-demo.appspot.com")) {
+				message = "This function is disabled on the demo instance.";
+			}
 
+			// Insert a contact
+			List<String> users = AuthUtil.getAllUserIds();
+			LOG.info("found " + users.size() + " users");
+			if (users.size() > 10) {
+				// We wouldn't want you to run out of quota on your first day!
+				message = "Total user count is " + users.size()
+						+ ". Aborting broadcast " + "to save your quota.";
+			} else {
+				TimelineItem allUsersItem = new TimelineItem();
+				allUsersItem.setText("Hello Everyone!");
+				allUsersItem.setCanonicalUrl("http://hello.com/");
 
-    } else {
-      String operation = req.getParameter("operation");
-      LOG.warning("Unknown operation specified " + operation);
-      message = "I don't know how to do that";
-    }
-    WebUtil.setFlash(req, message);
-    res.sendRedirect(WebUtil.buildUrl(req, "/"));
-  }
-  void SaveNewsPost(TimelineItem timelineItem) {
-	  Key newsPostKey = KeyFactory.createKey("NewsPost", "dont know");
-	  Date date = new Date();
-	  Entity drilled = new Entity("newspost", newsPostKey);
-	  drilled.setProperty("date", date);
-	  String Text=timelineItem.getText();
-	  if (Text.length()>500) {
-		  Text=Text.substring(0,500);
-	  }
-	  drilled.setProperty("timelineText", Text);
-	  drilled.setProperty("timelineHtml", timelineItem.getHtml());
-	  drilled.setProperty("timelineCanonicalUrl", timelineItem.getCanonicalUrl());
+				BatchRequest batch = MirrorClient.getMirror(null).batch();
+				BatchCallback callback = new BatchCallback();
 
-	  DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-	  datastore.put(drilled);
-  }
+				// TODO: add a picture of a cat
+				for (String user : users) {
+					Credential userCredential = AuthUtil.getCredential(user);
+					MirrorClient.getMirror(userCredential).timeline()
+							.insert(allUsersItem).queue(batch, callback);
+				}
+
+				batch.execute();
+				SaveNewsPost(allUsersItem);
+				message = "Successfully sent cards to " + callback.success
+						+ " users (" + callback.failure + " failed).";
+			}
+
+		} else {
+			String operation = req.getParameter("operation");
+			LOG.warning("Unknown operation specified " + operation);
+			message = "I don't know how to do that";
+		}
+		WebUtil.setFlash(req, message);
+		res.sendRedirect(WebUtil.buildUrl(req, "/"));
+	}
+
+	void SaveNewsPost(TimelineItem timelineItem) {
+		Key newsPostKey = KeyFactory
+				.createKey("NewsPost", timelineItem.getId());
+		Date date = new Date();
+		Entity drilled = new Entity("newspost", newsPostKey);
+		drilled.setProperty("date", date);
+		drilled.setProperty("timelineId", timelineItem.getId());
+		String Text = timelineItem.getText();
+		if (Text.length() > 500) {
+			Text = Text.substring(0, 500);
+		}
+		drilled.setProperty("timelineText", Text);
+		drilled.setProperty("timelineHtml", timelineItem.getHtml());
+		drilled.setProperty("timelineCanonicalUrl",
+				timelineItem.getCanonicalUrl());
+
+		DatastoreService datastore = DatastoreServiceFactory
+				.getDatastoreService();
+		datastore.put(drilled);
+	}
 }
-

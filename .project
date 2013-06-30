@@ -41,4 +41,15 @@
 		<nature>org.eclipse.wst.common.project.facet.core.nature</nature>
 		<nature>com.google.appengine.eclipse.core.gaeNature</nature>
 	</natures>
+	<filteredResources>
+		<filter>
+			<id>1372621980590</id>
+			<name></name>
+			<type>10</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-.git</arguments>
+			</matcher>
+		</filter>
+	</filteredResources>
 </projectDescription>
