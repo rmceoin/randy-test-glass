@@ -88,7 +88,7 @@ limitations under the License.
 <div class="navbar navbar-inverse navbar-fixed-top">
   <div class="navbar-inner">
     <div class="container">
-      <a class="brand" href="#">Randy Test Glass - Version 2</a>
+      <a class="brand" href="#">Randy Glass Test - Version 2</a>
 
       <div class="nav-collapse collapse">
         <form class="navbar-form pull-right" action="/signout" method="post">

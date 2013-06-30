@@ -1,4 +1,4 @@
-Randy Test Glass
+Randy Glass TEst
 ========================
 
 This is a direct copy of the Java Mirror API demo app.  From there
