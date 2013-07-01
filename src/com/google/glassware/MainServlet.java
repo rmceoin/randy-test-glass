@@ -184,10 +184,46 @@ public class MainServlet extends HttpServlet {
 			timelineItem.setNotification(new NotificationConfig()
 					.setLevel("DEFAULT"));
 
-			TimelineItem inserted=MirrorClient.insertTimelineItem(credential, timelineItem);
+			TimelineItem inserted = MirrorClient.insertTimelineItem(credential,
+					timelineItem);
 			SaveNewsPost(inserted);
 
 			message = "A timeline item has been inserted.";
+
+		} else if (req.getParameter("operation").equals("insertSetLocation")) {
+			LOG.fine("Inserting Set Location");
+
+			TimelineItem timelineItem = new TimelineItem();
+			timelineItem.setTitle("Randy Glass Test");
+			timelineItem.setText("Set Location");
+
+			List<MenuItem> menuItemList = new ArrayList<MenuItem>();
+
+			List<MenuValue> menuAtWorkValues = new ArrayList<MenuValue>();
+			menuAtWorkValues.add(new MenuValue().setIconUrl(
+					WebUtil.buildUrl(req, "/static/images/Briefcase.png"))
+					.setDisplayName("At Work"));
+			
+			menuItemList.add(new MenuItem().setValues(menuAtWorkValues)
+					.setId("atwork").setAction("CUSTOM"));
+
+			List<MenuValue> menuAtHomeValues = new ArrayList<MenuValue>();
+			menuAtHomeValues.add(new MenuValue().setIconUrl(
+					WebUtil.buildUrl(req, "/static/images/1-Normal-Home-icon.png"))
+					.setDisplayName("At Home"));
+			menuItemList.add(new MenuItem().setValues(menuAtHomeValues)
+					.setId("athome").setAction("CUSTOM"));
+
+			menuItemList.add(new MenuItem().setAction("TOGGLE_PINNED"));
+			menuItemList.add(new MenuItem().setAction("DELETE"));
+
+			timelineItem.setMenuItems(menuItemList);
+			timelineItem.setNotification(new NotificationConfig()
+					.setLevel("DEFAULT"));
+
+			MirrorClient.insertTimelineItem(credential, timelineItem);
+
+			message = "Insert a Set Location card.";
 
 		} else if (req.getParameter("operation").equals("insertItemWithAction")) {
 			LOG.fine("Inserting Timeline Item");
@@ -286,8 +322,8 @@ public class MainServlet extends HttpServlet {
 	void SaveNewsPost(TimelineItem timelineItem) {
 		Key newsPostKey = KeyFactory
 				.createKey("NewsPost", timelineItem.getId());
-		Date date = new Date();
 		Entity drilled = new Entity("newspost", newsPostKey);
+		Date date = new Date();
 		drilled.setProperty("date", date);
 		drilled.setProperty("timelineId", timelineItem.getId());
 		String Text = timelineItem.getText();

@@ -169,7 +169,7 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="/home/randy/workspace/randy-glass-test/web/WEB-INF/lib/google-api-services-mirror-v1-rev11-1.15.0-rc.jar">
 		<attributes>
-			<attribute name="javadoc_location" value="jar:platform:/resource/mirror-quickstart-java/google-api-services-mirror-v1-rev7-1.15.0-rc-javadoc.jar!/"/>
+			<attribute name="javadoc_location" value="jar:platform:/resource/randy-glass-test/google-api-services-mirror-v1-rev7-1.15.0-rc-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="web/WEB-INF/lib/google-api-services-oauth2-v2-rev39-1.15.0-rc.jar">

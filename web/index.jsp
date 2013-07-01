@@ -202,6 +202,10 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
         <input type="hidden" name="canonicalUrl" value="http://www.dallasnews.com/news/jfk50/reflect/20130522-dealey-plaza-memorial-planned-for-50th-anniversary-of-jfk-assassination.ece">
         <button class="btn" type="submit">A card to all users</button>
       </form>
+      <form action="<%= WebUtil.buildUrl(request, "/main") %>" method="post">
+        <input type="hidden" name="operation" value="insertSetLocation">
+        <button class="btn" type="submit">Insert Set Location card</button>
+      </form>
 
     </div>
 

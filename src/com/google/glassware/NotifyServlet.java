@@ -20,7 +20,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.api.services.mirror.Mirror;
 import com.google.api.services.mirror.model.Location;
-import com.google.api.services.mirror.model.MenuItem;
 import com.google.api.services.mirror.model.Notification;
 import com.google.api.services.mirror.model.NotificationConfig;
 import com.google.api.services.mirror.model.TimelineItem;
@@ -30,7 +29,6 @@ import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
-import com.google.common.collect.Lists;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -54,121 +52,137 @@ import javax.servlet.http.HttpServletResponse;
  */
 @SuppressWarnings("serial")
 public class NotifyServlet extends HttpServlet {
-  private static final Logger LOG = Logger.getLogger(MainServlet.class.getSimpleName());
+	private static final Logger LOG = Logger.getLogger(MainServlet.class.getSimpleName());
 
-  @Override
-  protected void doPost(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    // Respond with OK and status 200 in a timely fashion to prevent redelivery
-    response.setContentType("text/html");
-    Writer writer = response.getWriter();
-    writer.append("OK");
-    writer.close();
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// Respond with OK and status 200 in a timely fashion to prevent
+		// redelivery
+		response.setContentType("text/html");
+		Writer writer = response.getWriter();
+		writer.append("OK");
+		writer.close();
 
-    // Get the notification object from the request body (into a string so we
-    // can log it)
-    BufferedReader notificationReader =
-        new BufferedReader(new InputStreamReader(request.getInputStream()));
-    String notificationString = "";
+		// Get the notification object from the request body (into a string so
+		// we
+		// can log it)
+		BufferedReader notificationReader = new BufferedReader(new InputStreamReader(request.getInputStream()));
+		String notificationString = "";
 
-    // Count the lines as a very basic way to prevent Denial of Service attacks
-    int lines = 0;
-    while (notificationReader.ready()) {
-      notificationString += notificationReader.readLine();
-      lines++;
+		// Count the lines as a very basic way to prevent Denial of Service
+		// attacks
+		int lines = 0;
+		while (notificationReader.ready()) {
+			notificationString += notificationReader.readLine();
+			lines++;
 
-      // No notification would ever be this long. Something is very wrong.
-      if(lines > 1000) {
-        throw new IOException("Attempted to parse notification payload that was unexpectedly long.");
-      }
-    }
+			// No notification would ever be this long. Something is very wrong.
+			if (lines > 1000) {
+				throw new IOException("Attempted to parse notification payload that was unexpectedly long.");
+			}
+		}
 
-    LOG.info("got raw notification " + notificationString);
+		LOG.info("got raw notification " + notificationString);
 
-    JsonFactory jsonFactory = new JacksonFactory();
+		JsonFactory jsonFactory = new JacksonFactory();
 
-    // If logging the payload is not as important, use
-    // jacksonFactory.fromInputStream instead.
-    Notification notification = jsonFactory.fromString(notificationString, Notification.class);
+		// If logging the payload is not as important, use
+		// jacksonFactory.fromInputStream instead.
+		Notification notification = jsonFactory.fromString(notificationString, Notification.class);
 
-    LOG.info("Got a notification with ID: " + notification.getItemId());
+		LOG.info("Got a notification with ID: " + notification.getItemId());
 
-    // Figure out the impacted user and get their credentials for API calls
-    String userId = notification.getUserToken();
-    Credential credential = AuthUtil.getCredential(userId);
-    Mirror mirrorClient = MirrorClient.getMirror(credential);
+		// Figure out the impacted user and get their credentials for API calls
+		String userId = notification.getUserToken();
+		Credential credential = AuthUtil.getCredential(userId);
+		Mirror mirrorClient = MirrorClient.getMirror(credential);
 
+		if (notification.getCollection().equals("locations")) {
+			LOG.info("Notification of updated location");
+			Mirror glass = MirrorClient.getMirror(credential);
+			// item id is usually 'latest'
+			Location location = glass.locations().get(notification.getItemId()).execute();
 
-    if (notification.getCollection().equals("locations")) {
-      LOG.info("Notification of updated location");
-      Mirror glass = MirrorClient.getMirror(credential);
-      // item id is usually 'latest'
-      Location location = glass.locations().get(notification.getItemId()).execute();
+			LOG.info("New location is " + location.getLatitude() + ", " + location.getLongitude());
+			// MirrorClient.insertTimelineItem(
+			// credential,
+			// new TimelineItem().setText("You are now at " +
+			// location.getLatitude() + ", " + location.getLongitude())
+			// .setNotification(new
+			// NotificationConfig().setLevel("DEFAULT")).setLocation(location)
+			// .setMenuItems(Lists.newArrayList(new
+			// MenuItem().setAction("NAVIGATE"))));
+			LocationUtil.save(userId, location);
+			// This is a location notification. Ping the device with a timeline
+			// item
+			// telling them where they are.
+		} else if (notification.getCollection().equals("timeline")) {
+			// Get the impacted timeline item
+			TimelineItem timelineItem = mirrorClient.timeline().get(notification.getItemId()).execute();
+			LOG.info("Notification impacted timeline item with ID: " + timelineItem.getId());
 
-      LOG.info("New location is " + location.getLatitude() + ", " + location.getLongitude());
-      MirrorClient.insertTimelineItem(
-          credential,
-          new TimelineItem()
-              .setText("You are now at " + location.getLatitude() + ", " + location.getLongitude())
-              .setNotification(new NotificationConfig().setLevel("DEFAULT")).setLocation(location)
-              .setMenuItems(Lists.newArrayList(new MenuItem().setAction("NAVIGATE"))));
+			// If it was a share, and contains a photo, bounce it back to the
+			// user.
+			if (notification.getUserActions().contains(new UserAction().setType("SHARE")) && timelineItem.getAttachments() != null
+					&& timelineItem.getAttachments().size() > 0) {
+				LOG.info("It was a share of a photo. Sending the photo back to the user.");
 
-      // This is a location notification. Ping the device with a timeline item
-      // telling them where they are.
-    } else if (notification.getCollection().equals("timeline")) {
-      // Get the impacted timeline item
-      TimelineItem timelineItem = mirrorClient.timeline().get(notification.getItemId()).execute();
-      LOG.info("Notification impacted timeline item with ID: " + timelineItem.getId());
+				// Get the first attachment
+				String attachmentId = timelineItem.getAttachments().get(0).getId();
+				LOG.info("Found attachment with ID " + attachmentId);
 
-      // If it was a share, and contains a photo, bounce it back to the user.
-      if (notification.getUserActions().contains(new UserAction().setType("SHARE"))
-          && timelineItem.getAttachments() != null && timelineItem.getAttachments().size() > 0) {
-        LOG.info("It was a share of a photo. Sending the photo back to the user.");
+				// Get the attachment content
+				InputStream stream = MirrorClient.getAttachmentInputStream(credential, timelineItem.getId(), attachmentId);
 
-        // Get the first attachment
-        String attachmentId = timelineItem.getAttachments().get(0).getId();
-        LOG.info("Found attachment with ID " + attachmentId);
+				// Create a new timeline item with the attachment
+				TimelineItem echoPhotoItem = new TimelineItem();
+				echoPhotoItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
+				echoPhotoItem.setText("Echoing your shared photo");
 
-        // Get the attachment content
-        InputStream stream =
-            MirrorClient.getAttachmentInputStream(credential, timelineItem.getId(), attachmentId);
+				MirrorClient.insertTimelineItem(credential, echoPhotoItem, "image/jpeg", stream);
 
-        // Create a new timeline item with the attachment
-        TimelineItem echoPhotoItem = new TimelineItem();
-        echoPhotoItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
-        echoPhotoItem.setText("Echoing your shared photo");
+			}
+			if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("athome"))) {
+				LOG.info("custom at home");
 
-        MirrorClient.insertTimelineItem(credential, echoPhotoItem, "image/jpeg", stream);
+				// Mirror glass = MirrorClient.getMirror(credential);
 
-      } if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("drill"))) {
-    	  LOG.info("custom drill");
-          TimelineItem drillItem = new TimelineItem();
-          drillItem.setText("Drill, baby drill!");
-          drillItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
-          
-          try {
-			URL url = new URL("http://nazret.com/blog/media/blogs/new/oil_drill2042909.jpg");
-			URLConnection connection1 = url.openConnection();
-			  
-			MirrorClient.insertTimelineItem(credential, drillItem, "image/jpeg", connection1.getInputStream());
-          } catch (Exception e) {
-        	  LOG.info("Couldn't get URL");
-        	  MirrorClient.insertTimelineItem(credential, drillItem);
-          }
-          
-          Key drilledKey = KeyFactory.createKey("Drilling", "dont know");
-          Date date = new Date();
-          Entity drilled = new Entity("drilled", drilledKey);
-          drilled.setProperty("userId", userId);
-          drilled.setProperty("date", date);
-          drilled.setProperty("timelineId", timelineItem.getId());
+				Location location = LocationUtil.get(userId);
+				if (location!=null) {
+					LOG.info("got location");
+				} else {
+					LOG.info("missing location");
+				}
+			}
+			if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("drill"))) {
+				LOG.info("custom drill");
+				TimelineItem drillItem = new TimelineItem();
+				drillItem.setText("Drill, baby drill!");
+				drillItem.setNotification(new NotificationConfig().setLevel("DEFAULT"));
 
-          DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-          datastore.put(drilled);
-          
-      } else {
-        LOG.warning("I don't know what to do with this notification, so I'm ignoring it." + notification.getUserActions());
-      }
-    }
-  }
+				try {
+					URL url = new URL("http://nazret.com/blog/media/blogs/new/oil_drill2042909.jpg");
+					URLConnection connection1 = url.openConnection();
+
+					MirrorClient.insertTimelineItem(credential, drillItem, "image/jpeg", connection1.getInputStream());
+				} catch (Exception e) {
+					LOG.info("Couldn't get URL");
+					MirrorClient.insertTimelineItem(credential, drillItem);
+				}
+
+				Key drilledKey = KeyFactory.createKey("Drilling", "dont know");
+				Date date = new Date();
+				Entity drilled = new Entity("drilled", drilledKey);
+				drilled.setProperty("userId", userId);
+				drilled.setProperty("date", date);
+				drilled.setProperty("timelineId", timelineItem.getId());
+
+				DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+				datastore.put(drilled);
+
+			} else {
+				LOG.warning("I don't know what to do with this notification, so I'm ignoring it." + notification.getUserActions());
+			}
+		}
+	}
 }
