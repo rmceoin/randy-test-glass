@@ -22,6 +22,7 @@ import com.google.api.services.mirror.Mirror;
 import com.google.api.services.mirror.model.Location;
 import com.google.api.services.mirror.model.Notification;
 import com.google.api.services.mirror.model.NotificationConfig;
+import com.google.api.services.mirror.model.Subscription;
 import com.google.api.services.mirror.model.TimelineItem;
 import com.google.api.services.mirror.model.UserAction;
 import com.google.appengine.api.datastore.DatastoreService;
@@ -38,7 +39,10 @@ import java.io.Writer;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -104,18 +108,13 @@ public class NotifyServlet extends HttpServlet {
 			Location location = glass.locations().get(notification.getItemId()).execute();
 
 			LOG.info("New location is " + location.getLatitude() + ", " + location.getLongitude());
-			// MirrorClient.insertTimelineItem(
-			// credential,
-			// new TimelineItem().setText("You are now at " +
-			// location.getLatitude() + ", " + location.getLongitude())
-			// .setNotification(new
-			// NotificationConfig().setLevel("DEFAULT")).setLocation(location)
-			// .setMenuItems(Lists.newArrayList(new
-			// MenuItem().setAction("NAVIGATE"))));
+			Location previousLocation = LocationUtil.get(userId);
 			LocationUtil.save(userId, location);
-			// This is a location notification. Ping the device with a timeline
-			// item
-			// telling them where they are.
+
+			String enteredTag = LocationUtil.enterTag(userId, previousLocation, location);
+			if (enteredTag != null) {
+				sendMap(credential, userId, location, "You arrived at "+enteredTag);
+			}
 		} else if (notification.getCollection().equals("timeline")) {
 			// Get the impacted timeline item
 			TimelineItem timelineItem = mirrorClient.timeline().get(notification.getItemId()).execute();
@@ -145,16 +144,46 @@ public class NotifyServlet extends HttpServlet {
 			if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("athome"))) {
 				LOG.info("custom at home");
 
-				// Mirror glass = MirrorClient.getMirror(credential);
+				Location location = LocationUtil.get(userId);
+				if (location != null) {
+					LOG.info("got location");
+					LocationUtil.saveTag(userId, location, "home");
+				} else {
+					LOG.info("missing location");
+					checkLocationSubscription(credential, userId, request);
+				}
+			} else if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("atwork"))) {
+				LOG.info("custom at work");
 
 				Location location = LocationUtil.get(userId);
-				if (location!=null) {
+				if (location != null) {
 					LOG.info("got location");
+					LocationUtil.saveTag(userId, location, "work");
 				} else {
 					LOG.info("missing location");
 				}
-			}
-			if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("drill"))) {
+			} else if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("showhome"))) {
+				Location location = LocationUtil.getTag(userId, "home");
+				if (location != null) {
+					LOG.info("show home got location");
+					sendMap(credential, userId, location, "Home");
+				}
+			} else if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("showwork"))) {
+				Location location = LocationUtil.getTag(userId, "work");
+				if (location != null) {
+					LOG.info("show work got location");
+					sendMap(credential, userId, location, "Work");
+				}
+			} else if (notification.getUserActions().contains(new UserAction().setType("REPLY"))) {
+				LOG.info("got a REPLY: " + timelineItem.getText());
+				Pattern pattern = Pattern.compile("^remind me to (.*) at ([a-z]+)$");
+				Matcher matcher = pattern.matcher(timelineItem.getText());
+				if (matcher.find()) {
+					String action = matcher.group(1);
+					String tag = matcher.group(2);
+					LOG.info("matched: " + action + " at " + tag);
+				}
+			} else if (notification.getUserActions().contains(new UserAction().setType("CUSTOM").setPayload("drill"))) {
 				LOG.info("custom drill");
 				TimelineItem drillItem = new TimelineItem();
 				drillItem.setText("Drill, baby drill!");
@@ -184,5 +213,67 @@ public class NotifyServlet extends HttpServlet {
 				LOG.warning("I don't know what to do with this notification, so I'm ignoring it." + notification.getUserActions());
 			}
 		}
+	}
+
+	private void checkLocationSubscription(Credential credential, String userId, HttpServletRequest req) {
+		boolean locationSubscriptionExists = false;
+
+		// Mirror glass = MirrorClient.getMirror(credential);
+		List<Subscription> subscriptions;
+		try {
+			subscriptions = MirrorClient.listSubscriptions(credential).getItems();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+		LOG.info("subscriptions = " + subscriptions);
+		if (subscriptions != null) {
+			for (Subscription subscription : subscriptions) {
+				if (subscription.getId().equals("locations")) {
+					locationSubscriptionExists = true;
+				}
+			}
+		}
+		if (locationSubscriptionExists == false) {
+			LOG.info("need to add a subscription to location");
+			try {
+				MirrorClient.insertSubscription(credential, WebUtil.buildUrl(req, "/notify"), userId, "locations");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+	}
+
+	private void sendMap(Credential credential, String userId, Location location, String name) throws IOException {
+
+		TimelineItem locationMap = new TimelineItem();
+
+		StringBuilder builder = new StringBuilder();
+		builder.append("<article>\n");
+		builder.append("<figure>\n");
+		builder.append("<img src=\"glass://map?w=240&h=360&marker=0;");
+		builder.append(location.getLatitude());
+		builder.append(",");
+		builder.append(location.getLongitude());
+		builder.append("\" height=\"360\" width=\"240\">");
+		builder.append("</figure>\n");
+		builder.append("<section>\n");
+		builder.append("<div class=\"text-auto-size\">");
+		builder.append(name);
+		builder.append("</div>\n");
+		builder.append("</section>\n");
+		builder.append("<footer>");
+		builder.append("<div>");
+		builder.append("Randy Glass Test");
+		builder.append("</div>");
+		builder.append("</footer>\n");
+		builder.append("</article>");
+		locationMap.setHtml(builder.toString());
+		LOG.info("html=" + builder.toString());
+		locationMap.setTitle(name);
+		locationMap.setNotification(new NotificationConfig().setLevel("DEFAULT"));
+		MirrorClient.insertTimelineItem(credential, locationMap);
 	}
 }

@@ -203,8 +203,8 @@ Given that Plano is a suburb that grew because of the car, the city doesn’t ra
         <button class="btn" type="submit">A card to all users</button>
       </form>
       <form action="<%= WebUtil.buildUrl(request, "/main") %>" method="post">
-        <input type="hidden" name="operation" value="insertSetLocation">
-        <button class="btn" type="submit">Insert Set Location card</button>
+        <input type="hidden" name="operation" value="insertRemindMe">
+        <button class="btn" type="submit">Insert Remind Me card</button>
       </form>
 
     </div>

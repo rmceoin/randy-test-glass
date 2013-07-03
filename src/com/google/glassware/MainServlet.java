@@ -152,24 +152,6 @@ public class MainServlet extends HttpServlet {
 				}
 				builder.append("</article>");
 
-				// <article>\n<div class=\"photo-overlay\"></div>\n<img
-				// src=\"https://randy-glass-test.appspot.com/static/images/N1A_25DealeyPlaza14-640x360.jpg\"
-				// width=\"100%\" height=\"100%\">\n\n
-				// <section>\n
-				// <p class=\"text-auto-size\">Dealey Plaza memorial planned for
-				// 50th anniversary of JFK
-				// assassination</p>\n</section>\n<footer><div>The Dallas
-				// Morning News</div></footer>\n</article>
-
-				// <img
-				// src=\"https://mirror-api-playground.appspot.com/links/filoli-spring-fling.jpg\"
-				// width=\"100%\" height=\"100%\">
-
-				// String article="<article>\n <section>\n <div
-				// class=\"text-large\" style=\"\">\n <p
-				// class=\"yellow\">8:00<sub>PM</sub></p>\n <p>Dinner with folks
-				// tonight</p>\n\" +
-				// "    </div>\n  </section>\n  <footer>\n    <div>The Dallas Morning News</div>\n  </footer>\n</article>\n";
 				timelineItem.setHtml(builder.toString());
 				timelineItem.setTitle(CONTACT_NAME);
 			}
@@ -190,22 +172,15 @@ public class MainServlet extends HttpServlet {
 
 			message = "A timeline item has been inserted.";
 
-		} else if (req.getParameter("operation").equals("insertSetLocation")) {
-			LOG.fine("Inserting Set Location");
+		} else if (req.getParameter("operation").equals("insertRemindMe")) {
+			LOG.fine("Inserting Remind Me");
 
 			TimelineItem timelineItem = new TimelineItem();
 			timelineItem.setTitle("Randy Glass Test");
-			timelineItem.setText("Set Location");
+			timelineItem.setText("Remind Me");
 
 			List<MenuItem> menuItemList = new ArrayList<MenuItem>();
-
-			List<MenuValue> menuAtWorkValues = new ArrayList<MenuValue>();
-			menuAtWorkValues.add(new MenuValue().setIconUrl(
-					WebUtil.buildUrl(req, "/static/images/Briefcase.png"))
-					.setDisplayName("At Work"));
-			
-			menuItemList.add(new MenuItem().setValues(menuAtWorkValues)
-					.setId("atwork").setAction("CUSTOM"));
+			menuItemList.add(new MenuItem().setAction("REPLY"));
 
 			List<MenuValue> menuAtHomeValues = new ArrayList<MenuValue>();
 			menuAtHomeValues.add(new MenuValue().setIconUrl(
@@ -213,6 +188,27 @@ public class MainServlet extends HttpServlet {
 					.setDisplayName("At Home"));
 			menuItemList.add(new MenuItem().setValues(menuAtHomeValues)
 					.setId("athome").setAction("CUSTOM"));
+
+			List<MenuValue> menuAtWorkValues = new ArrayList<MenuValue>();
+			menuAtWorkValues.add(new MenuValue().setIconUrl(
+					WebUtil.buildUrl(req, "/static/images/Briefcase.png"))
+					.setDisplayName("At Work"));
+			menuItemList.add(new MenuItem().setValues(menuAtWorkValues)
+					.setId("atwork").setAction("CUSTOM"));
+
+			List<MenuValue> menuShowHomeValues = new ArrayList<MenuValue>();
+			menuShowHomeValues.add(new MenuValue().setIconUrl(
+					WebUtil.buildUrl(req, "/static/images/1-Normal-Home-icon.png"))
+					.setDisplayName("Show Home"));
+			menuItemList.add(new MenuItem().setValues(menuShowHomeValues)
+					.setId("showhome").setAction("CUSTOM"));
+
+			List<MenuValue> menuShowWorkValues = new ArrayList<MenuValue>();
+			menuShowWorkValues.add(new MenuValue().setIconUrl(
+					WebUtil.buildUrl(req, "/static/images/Briefcase.png"))
+					.setDisplayName("Show Work"));
+			menuItemList.add(new MenuItem().setValues(menuShowWorkValues)
+					.setId("showwork").setAction("CUSTOM"));
 
 			menuItemList.add(new MenuItem().setAction("TOGGLE_PINNED"));
 			menuItemList.add(new MenuItem().setAction("DELETE"));
